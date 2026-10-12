@@ -2,8 +2,6 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { RequireAuth } from '@/components/RequireAuth';
 import { BasicLayout } from '@/layouts/BasicLayout';
 import { CatalogPage } from '@/pages/Catalog';
-import { CheckoutCancelPage } from '@/pages/Checkout/Cancel';
-import { CheckoutSuccessPage } from '@/pages/Checkout/Success';
 import { LicenseDetailPage } from '@/pages/LicenseDetail';
 import { LicensesPage } from '@/pages/Licenses';
 import { LoginPage } from '@/pages/Login';
@@ -24,8 +22,6 @@ const router = createBrowserRouter([
           { path: '/catalog', element: <CatalogPage /> },
           { path: '/purchase/:product/:edition', element: <PurchasePage /> },
           { path: '/orders', element: <OrdersPage /> },
-          { path: '/checkout/success', element: <CheckoutSuccessPage /> },
-          { path: '/checkout/cancel', element: <CheckoutCancelPage /> },
         ],
       },
     ],

@@ -76,11 +76,14 @@ export type OrderStatus =
   | 'EXPIRED'
   | 'REFUNDED';
 
-/** 结账会话：订单号与收银台地址（支付宝 `alipay.trade.page.pay` 签名链接）。 */
+/** 下单结果：订单号与二维码内容（支付宝当面付预下单，买家扫码付款）。 */
 export interface CheckoutResponse {
   readonly orderId: string;
-  /** 收银台地址，前端直接跳转。 */
-  readonly checkoutUrl: string;
+  /**
+   * 二维码内容（支付宝返回的 `https://qr.alipay.com/...`），
+   * 由前端本地渲染成二维码，不做任何跳转。
+   */
+  readonly qrCode: string;
 }
 
 export interface OrderSummary {
