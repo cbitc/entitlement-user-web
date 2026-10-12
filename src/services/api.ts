@@ -1,9 +1,10 @@
 import { request } from './request';
 import type {
   CatalogResponse,
-  CheckoutSessionResponse,
+  CheckoutResponse,
   LicenseListResponse,
   OrderListResponse,
+  OrderSummary,
   RequestLoginResponse,
   VerifyLoginResponse,
 } from './types';
@@ -35,10 +36,23 @@ export const deactivateDevice = (params: {
 export const listCatalog = () =>
   request.get<CatalogResponse>('/licensing/catalog').then((res) => res.data);
 
-/** 创建结账会话，返回支付渠道的托管结账页地址。 */
+/** 创建订单，返回支付宝收银台地址（前端直接跳转）。 */
 export const createCheckout = (params: { product: string; edition: string }) =>
   request
-    .post<CheckoutSessionResponse>('/billing/checkout', params)
+    .post<CheckoutResponse>('/billing/checkout', params)
+    .then((res) => res.data);
+
+/**
+ * 主动询问渠道「这笔订单付款了吗」，返回订单当前状态。
+ *
+ * 支付宝的异步通知可能晚于浏览器回跳，成功页用它立即确认结果；
+ * 订单已不是 PENDING 时后端只读存储，不打扰渠道，因此可安全轮询。
+ */
+export const checkOrderPayment = (orderId: string) =>
+  request
+    .post<OrderSummary>(
+      `/billing/orders/${encodeURIComponent(orderId)}/payment-check`,
+    )
     .then((res) => res.data);
 
 /** 当前用户的订单记录（按创建时间倒序）。 */

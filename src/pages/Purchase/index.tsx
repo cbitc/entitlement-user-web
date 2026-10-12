@@ -13,7 +13,7 @@ const CHECKOUT_ERROR_MESSAGES: Record<string, string> = {
   SubscriptionAlreadyActive: '你已订阅该版本且仍在有效期内，无需重复购买',
   EditionUnavailable: '该版本已下架，无法购买',
   UnknownEdition: '该版本不存在',
-  PaymentGatewayError: '支付渠道暂时不可用，请稍后重试',
+  PaymentGatewayError: '支付宝暂时不可用，请稍后重试',
 };
 
 interface PurchaseDetail {
@@ -53,7 +53,7 @@ export const PurchasePage = () => {
     setSubmitting(true);
     try {
       const session = await initiateCheckout(targetProduct, targetEdition);
-      // 跳出本页到支付渠道；成功后由渠道回跳到 /checkout/success。
+      // 跳出本页到支付宝收银台；付款后由支付宝把浏览器带回 /checkout/success。
       window.location.assign(session.checkoutUrl);
     } catch (error) {
       if (error instanceof ApiError) {
@@ -88,6 +88,7 @@ export const PurchasePage = () => {
           <Descriptions.Item label="订阅时长">
             {detail ? formatDuration(detail.edition.durationDays) : '—'}
           </Descriptions.Item>
+          <Descriptions.Item label="支付方式">支付宝</Descriptions.Item>
           <Descriptions.Item label="生效时间">
             支付成功后立即生效
           </Descriptions.Item>
@@ -98,7 +99,7 @@ export const PurchasePage = () => {
             loading={submitting}
             onClick={() => void handleCheckout()}
           >
-            去支付
+            去支付宝支付
           </Button>
           <Link to="/catalog">
             <Button disabled={submitting}>返回产品目录</Button>

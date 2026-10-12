@@ -1,5 +1,5 @@
 import { createCheckout } from './api';
-import type { CheckoutSessionResponse, OrderStatus } from './types';
+import type { CheckoutResponse, OrderStatus } from './types';
 
 /** 订单状态 → 中文标签与展示颜色。 */
 export const ORDER_STATUS_LABELS: Readonly<
@@ -15,8 +15,8 @@ export const ORDER_STATUS_LABELS: Readonly<
 const PENDING_ORDER_KEY = 'entitlement.checkout.pendingOrder';
 
 /**
- * Stripe 回跳时不会带上订单号，因此下单前在 sessionStorage 里暂存，
- * 供成功页确认到账使用。
+ * 支付宝也会在同步回跳的查询串里带上订单号（`out_trade_no`），
+ * 但订单号同时暂存在 sessionStorage：回跳参数缺失时仍能确认本次支付。
  */
 export const rememberPendingOrder = (orderId: string): void => {
   sessionStorage.setItem(PENDING_ORDER_KEY, orderId);
@@ -31,11 +31,11 @@ export const clearPendingOrder = (): void => {
   sessionStorage.removeItem(PENDING_ORDER_KEY);
 };
 
-/** 发起结账：创建订单并暂存订单号，返回支付渠道地址。 */
+/** 发起结账：创建订单并暂存订单号，返回支付宝收银台地址。 */
 export const initiateCheckout = async (
   product: string,
   edition: string,
-): Promise<CheckoutSessionResponse> => {
+): Promise<CheckoutResponse> => {
   const session = await createCheckout({ product, edition });
   rememberPendingOrder(session.orderId);
   return session;

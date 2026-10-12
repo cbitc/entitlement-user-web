@@ -1,24 +1,41 @@
 import { PageContainer } from '@ant-design/pro-components';
 import { Button, Result, Spin } from 'antd';
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { listOrders } from '@/services/api';
+import { Link, useSearchParams } from 'react-router-dom';
+import { checkOrderPayment } from '@/services/api';
 import { clearPendingOrder, peekPendingOrder } from '@/services/billing';
-
-const POLL_INTERVAL_MS = 2_000;
-const POLL_TIMEOUT_MS = 30_000;
-
-type Phase = 'confirming' | 'paid' | 'timeout' | 'unknown';
+import { ApiError } from '@/services/request';
+import type { OrderStatus } from '@/services/types';
 
 /**
- * 支付回跳落地页。许可证由支付渠道的 webhook 异步授予，
- * 因此这里轮询订单状态直到变为已支付（或超时）。
+ * 重试查询的等待间隔（毫秒）。支付宝的异步通知常常晚于浏览器回跳，
+ * 因此先立即查一次，之后逐步退让重试，避免给渠道太大的查询压力。
+ */
+const RETRY_DELAYS_MS = [1_000, 2_000, 3_000, 5_000, 5_000, 5_000, 5_000] as const;
+
+const UNFINISHED_STATUSES: ReadonlyArray<OrderStatus> = [
+  'FAILED',
+  'EXPIRED',
+  'REFUNDED',
+];
+
+type Phase = 'confirming' | 'paid' | 'pending' | 'closed' | 'unknown';
+
+/**
+ * 支付回跳落地页。支付宝只负责把浏览器带回来，不会因此发放许可证，
+ * 所以这里主动向渠道查询订单状态（payment-check），而不是干等异步通知。
  */
 export const CheckoutSuccessPage = () => {
-  const orderIdRef = useRef<string | null>(peekPendingOrder());
+  const [searchParams] = useSearchParams();
+  // 回跳参数优先；它缺失时退回下单前暂存的订单号。
+  const returnedOrderId = searchParams.get('out_trade_no');
+  const orderIdRef = useRef<string | null>(
+    returnedOrderId ?? peekPendingOrder(),
+  );
   const [phase, setPhase] = useState<Phase>(
     orderIdRef.current ? 'confirming' : 'unknown',
   );
+  const [retryToken, setRetryToken] = useState(0);
 
   useEffect(() => {
     const target = orderIdRef.current;
@@ -28,44 +45,55 @@ export const CheckoutSuccessPage = () => {
 
     let cancelled = false;
     let timer = 0;
-    const startedAt = Date.now();
+    let waits = 0;
 
-    const poll = async () => {
+    const confirm = async () => {
+      let settled: Phase | null = null;
       try {
-        const { orders } = await listOrders();
-        const order = orders.find((item) => item.orderId === target);
-        if (cancelled) {
-          return;
+        const order = await checkOrderPayment(target);
+        if (order.status === 'PAID') {
+          settled = 'paid';
+        } else if (UNFINISHED_STATUSES.includes(order.status)) {
+          settled = 'closed';
         }
-        if (order?.status === 'PAID') {
-          clearPendingOrder();
-          setPhase('paid');
-          return;
+      } catch (error) {
+        // 订单不存在（含他人订单）：没有可确认的对象，直接结束。
+        if (error instanceof ApiError && error.type === 'OrderNotFound') {
+          settled = 'unknown';
         }
-        if (order?.status === 'FAILED' || order?.status === 'EXPIRED') {
-          clearPendingOrder();
-          setPhase('timeout');
-          return;
-        }
-      } catch {
-        // 网络抖动：忽略本次失败，继续轮询。
+        // 其余情况（渠道暂不可达、网络抖动）保持重试。
       }
+
       if (cancelled) {
         return;
       }
-      if (Date.now() - startedAt >= POLL_TIMEOUT_MS) {
-        setPhase('timeout');
+      if (settled) {
+        if (settled !== 'unknown') {
+          clearPendingOrder();
+        }
+        setPhase(settled);
         return;
       }
-      timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
+      if (waits >= RETRY_DELAYS_MS.length) {
+        setPhase('pending');
+        return;
+      }
+      const delay = RETRY_DELAYS_MS[waits];
+      waits += 1;
+      timer = window.setTimeout(() => void confirm(), delay);
     };
 
-    timer = window.setTimeout(() => void poll(), POLL_INTERVAL_MS);
+    void confirm();
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, []);
+  }, [retryToken]);
+
+  const recheck = () => {
+    setPhase('confirming');
+    setRetryToken((value) => value + 1);
+  };
 
   if (phase === 'confirming') {
     return (
@@ -73,7 +101,7 @@ export const CheckoutSuccessPage = () => {
         <Result
           icon={<Spin size="large" />}
           title="正在确认支付结果…"
-          subTitle="支付已完成，正在等待支付渠道回执，通常几秒内完成。"
+          subTitle="正在向支付宝查询本次支付的结果，通常几秒内完成。"
         />
       </PageContainer>
     );
@@ -99,19 +127,39 @@ export const CheckoutSuccessPage = () => {
     );
   }
 
-  if (phase === 'timeout') {
+  if (phase === 'closed') {
+    return (
+      <PageContainer title="支付结果">
+        <Result
+          status="warning"
+          title="支付未完成"
+          subTitle="本次订单未完成支付，未开通任何订阅。如已扣款请保留订单号并联系我们。"
+          extra={[
+            <Link to="/catalog" key="catalog">
+              <Button type="primary">返回产品目录</Button>
+            </Link>,
+            <Link to="/orders" key="orders">
+              <Button>查看订单</Button>
+            </Link>,
+          ]}
+        />
+      </PageContainer>
+    );
+  }
+
+  if (phase === 'pending') {
     return (
       <PageContainer title="支付结果">
         <Result
           status="warning"
           title="支付结果确认中"
-          subTitle="暂未收到支付渠道回执。若已完成支付，订单会自动更新为已支付，可在订单记录中查看。"
+          subTitle="暂未查询到支付成功的记录。如果你已完成付款，支付宝回执到达后订单会自动更新为已支付，可在订单记录中查看。"
           extra={[
+            <Button type="primary" key="recheck" onClick={recheck}>
+              重新查询
+            </Button>,
             <Link to="/orders" key="orders">
-              <Button type="primary">查看订单</Button>
-            </Link>,
-            <Link to="/licenses" key="licenses">
-              <Button>我的许可证</Button>
+              <Button>查看订单</Button>
             </Link>,
           ]}
         />

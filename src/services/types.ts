@@ -76,9 +76,10 @@ export type OrderStatus =
   | 'EXPIRED'
   | 'REFUNDED';
 
-export interface CheckoutSessionResponse {
+/** 结账会话：订单号与收银台地址（支付宝 `alipay.trade.page.pay` 签名链接）。 */
+export interface CheckoutResponse {
   readonly orderId: string;
-  /** 支付渠道的托管结账页地址，前端直接跳转。 */
+  /** 收银台地址，前端直接跳转。 */
   readonly checkoutUrl: string;
 }
 
