@@ -3,12 +3,14 @@ import { App, Button, Popconfirm, Result, Spin } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { deactivateDevice, listLicenses } from '@/services/api';
+import { displayProductName, useProductNames } from '@/services/catalog';
 import type { Activation, LicenseSummary } from '@/services/types';
 import { LicenseStatusTag } from '../Licenses/licenseStatus';
 
 export const LicenseDetailPage = () => {
   const { product = '', edition = '' } = useParams();
   const { message } = App.useApp();
+  const productNames = useProductNames();
   const [license, setLicense] = useState<LicenseSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,7 +71,7 @@ export const LicenseDetailPage = () => {
 
   return (
     <PageContainer
-      title={`${license.product} · ${license.edition}`}
+      title={`${displayProductName(productNames, license.product)} · ${license.edition}`}
       tags={<LicenseStatusTag license={license} />}
     >
       <ProDescriptions

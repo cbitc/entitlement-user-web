@@ -2,11 +2,13 @@ import { PageContainer, ProList } from '@ant-design/pro-components';
 import { App, Button, Empty, Space, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import { listLicenses } from '@/services/api';
+import { displayProductName, useProductNames } from '@/services/catalog';
 import type { LicenseSummary } from '@/services/types';
 import { LicenseStatusTag } from './licenseStatus';
 
 export const LicensesPage = () => {
   const { message } = App.useApp();
+  const productNames = useProductNames();
 
   return (
     <PageContainer title="我的许可证">
@@ -25,7 +27,7 @@ export const LicensesPage = () => {
           title: {
             render: (_, item) => (
               <Link to={`/licenses/${encodeURIComponent(item.product)}/${encodeURIComponent(item.edition)}`}>
-                {item.product} · {item.edition}
+                {displayProductName(productNames, item.product)} · {item.edition}
               </Link>
             ),
           },

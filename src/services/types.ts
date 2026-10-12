@@ -38,16 +38,32 @@ export interface LicenseListResponse {
   readonly licenses: ReadonlyArray<LicenseSummary>;
 }
 
+/** 目录中可售的版本（隶属某个产品）。 */
 export interface CatalogEdition {
-  readonly product: string;
-  readonly edition: string;
+  readonly code: string;
   readonly priceCents: number;
   readonly currency: string;
   readonly durationDays: number;
 }
 
-export interface CatalogResponse {
+/**
+ * 目录中的产品：展示性元数据（description/vendor/websiteUrl/iconUrl/tags/
+ * sortOrder）不参与授权判定，仅用于呈现。
+ */
+export interface CatalogProduct {
+  readonly code: string;
+  readonly displayName: string;
+  readonly description: string | null;
+  readonly vendor: string | null;
+  readonly websiteUrl: string | null;
+  readonly iconUrl: string | null;
+  readonly tags: ReadonlyArray<string>;
+  readonly sortOrder: number;
   readonly editions: ReadonlyArray<CatalogEdition>;
+}
+
+export interface CatalogResponse {
+  readonly products: ReadonlyArray<CatalogProduct>;
 }
 
 // -- billing ----------------------------------------------------------------

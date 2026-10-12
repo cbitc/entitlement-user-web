@@ -1,23 +1,24 @@
+import { AppstoreOutlined } from '@ant-design/icons';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { App, Button, Empty, Space, Spin, Tag, Typography } from 'antd';
+import { App, Avatar, Button, Col, Empty, Row, Space, Spin, Tag, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { listCatalog, listLicenses } from '@/services/api';
-import type { CatalogEdition } from '@/services/types';
+import type { CatalogEdition, CatalogProduct } from '@/services/types';
 import { formatDuration, formatMoney } from '@/utils/money';
 
 interface EditionCard extends CatalogEdition {
   readonly subscribed: boolean;
 }
 
-interface ProductGroup {
-  readonly product: string;
-  readonly editions: EditionCard[];
+/** 目录产品加上本用户各版本的订阅状态。 */
+interface ProductCard extends Omit<CatalogProduct, 'editions'> {
+  readonly editions: ReadonlyArray<EditionCard>;
 }
 
 export const CatalogPage = () => {
   const { message } = App.useApp();
-  const [groups, setGroups] = useState<ProductGroup[]>([]);
+  const [products, setProducts] = useState<ProductCard[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,19 +30,13 @@ export const CatalogPage = () => {
             .filter((item) => new Date(item.periodEnd).getTime() > Date.now())
             .map((item) => `${item.product}/${item.edition}`),
         );
-        const byProduct = new Map<string, EditionCard[]>();
-        catalog.editions.forEach((item) => {
-          const list = byProduct.get(item.product) ?? [];
-          list.push({
-            ...item,
-            subscribed: activeKeys.has(`${item.product}/${item.edition}`),
-          });
-          byProduct.set(item.product, list);
-        });
-        setGroups(
-          [...byProduct.entries()].map(([product, editions]) => ({
-            product,
-            editions,
+        setProducts(
+          catalog.products.map((product) => ({
+            ...product,
+            editions: product.editions.map((edition) => ({
+              ...edition,
+              subscribed: activeKeys.has(`${product.code}/${edition.code}`),
+            })),
           })),
         );
       })
@@ -54,47 +49,77 @@ export const CatalogPage = () => {
   return (
     <PageContainer title="产品目录">
       <Spin spinning={loading}>
-        {groups.length === 0 && !loading ? (
+        {products.length === 0 && !loading ? (
           <Empty description="暂无可订阅的产品" />
         ) : (
-          groups.map((group) => (
-            <ProCard key={group.product} title={group.product} gutter={[16, 16]} wrap>
-              {group.editions.map((card) => (
-                <ProCard
-                  key={`${group.product}/${card.edition}`}
-                  colSpan={{ xs: 24, sm: 12, md: 8 }}
-                  bordered
-                  hoverable
-                >
-                  <Space direction="vertical" style={{ width: '100%' }} size={4}>
-                    <Typography.Title level={4} style={{ margin: 0 }}>
-                      {card.edition}
-                      {card.subscribed && (
-                        <Tag color="success" style={{ marginLeft: 8 }}>
-                          已订阅
-                        </Tag>
-                      )}
-                    </Typography.Title>
-                    <Typography.Text strong>
-                      {formatMoney(card.priceCents, card.currency)}
-                    </Typography.Text>
-                    <Typography.Text type="secondary">
-                      有效期 {formatDuration(card.durationDays)}
-                    </Typography.Text>
-                    {card.subscribed ? (
-                      <Link to="/licenses">
-                        <Button>查看许可证</Button>
-                      </Link>
-                    ) : (
-                      <Link
-                        to={`/purchase/${encodeURIComponent(group.product)}/${encodeURIComponent(card.edition)}`}
-                      >
-                        <Button type="primary">订阅</Button>
-                      </Link>
-                    )}
-                  </Space>
-                </ProCard>
-              ))}
+          products.map((product) => (
+            <ProCard
+              key={product.code}
+              title={
+                <Space size={10}>
+                  <Avatar
+                    shape="square"
+                    size={40}
+                    src={product.iconUrl ?? undefined}
+                    alt={product.displayName}
+                    icon={<AppstoreOutlined />}
+                  />
+                  <span>{product.displayName}</span>
+                </Space>
+              }
+              bordered
+              headerBordered
+              style={{ marginBottom: 16 }}
+            >
+              {product.tags.length > 0 && (
+                <Space size={[4, 8]} wrap style={{ marginBottom: 8 }}>
+                  {product.tags.map((tag) => (
+                    <Tag key={tag} color="blue">
+                      {tag}
+                    </Tag>
+                  ))}
+                </Space>
+              )}
+              {product.description && (
+                <Typography.Paragraph type="secondary">
+                  {product.description}
+                </Typography.Paragraph>
+              )}
+              <Row gutter={[16, 16]}>
+                {product.editions.map((card) => (
+                  <Col key={`${product.code}/${card.code}`} xs={24} sm={12} md={8}>
+                    <ProCard bordered hoverable style={{ height: '100%' }}>
+                      <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                        <Typography.Title level={4} style={{ margin: 0 }}>
+                          {card.code}
+                          {card.subscribed && (
+                            <Tag color="success" style={{ marginLeft: 8 }}>
+                              已订阅
+                            </Tag>
+                          )}
+                        </Typography.Title>
+                        <Typography.Text strong>
+                          {formatMoney(card.priceCents, card.currency)}
+                        </Typography.Text>
+                        <Typography.Text type="secondary">
+                          有效期 {formatDuration(card.durationDays)}
+                        </Typography.Text>
+                        {card.subscribed ? (
+                          <Link to="/licenses">
+                            <Button>查看许可证</Button>
+                          </Link>
+                        ) : (
+                          <Link
+                            to={`/purchase/${encodeURIComponent(product.code)}/${encodeURIComponent(card.code)}`}
+                          >
+                            <Button type="primary">订阅</Button>
+                          </Link>
+                        )}
+                      </Space>
+                    </ProCard>
+                  </Col>
+                ))}
+              </Row>
             </ProCard>
           ))
         )}

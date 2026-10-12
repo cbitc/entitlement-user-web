@@ -2,11 +2,13 @@ import { PageContainer, ProTable } from '@ant-design/pro-components';
 import { App, Tag, Typography } from 'antd';
 import { listOrders } from '@/services/api';
 import { ORDER_STATUS_LABELS } from '@/services/billing';
+import { displayProductName, useProductNames } from '@/services/catalog';
 import type { OrderSummary } from '@/services/types';
 import { formatMoney } from '@/utils/money';
 
 export const OrdersPage = () => {
   const { message } = App.useApp();
+  const productNames = useProductNames();
 
   return (
     <PageContainer title="我的订单">
@@ -33,7 +35,12 @@ export const OrdersPage = () => {
             ellipsis: true,
             width: 280,
           },
-          { title: '产品', dataIndex: 'product', width: 140 },
+          {
+            title: '产品',
+            width: 140,
+            render: (_: unknown, record: OrderSummary) =>
+              displayProductName(productNames, record.product),
+          },
           { title: '版本', dataIndex: 'edition', width: 140 },
           {
             title: '金额',
