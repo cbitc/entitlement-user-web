@@ -8,9 +8,8 @@ export const ORDER_STATUS_LABELS: Readonly<
 > = {
   PENDING: { text: '待支付', color: 'processing' },
   PAID: { text: '已支付', color: 'success' },
-  FAILED: { text: '支付失败', color: 'error' },
   EXPIRED: { text: '已过期', color: 'default' },
-  REFUNDED: { text: '已退款', color: 'warning' },
+  FAILED: { text: '支付失败', color: 'error' },
 };
 
 /** 订单终态：之后不再变化，轮询到此结束。 */
@@ -18,7 +17,6 @@ export const SETTLED_ORDER_STATUSES: ReadonlyArray<OrderStatus> = [
   'PAID',
   'FAILED',
   'EXPIRED',
-  'REFUNDED',
 ];
 
 /** 扫码期间轮询订单状态的默认间隔（毫秒）。 */
@@ -36,9 +34,10 @@ export interface OrderPollingOptions {
 /**
  * 轮询订单状态直到有结论，返回停止轮询的函数。
  *
- * 后端这条路由只读自己的存储、不询问支付宝，因此轮询代价很低；页面在
- * 后台时跳过请求，回到前台立即补一次。单次失败（网络抖动、网关错误）
- * 不会中断轮询，下一轮继续。
+ * 付款确认完全由后端完成（支付宝异步通知或后端对账轮询），前端没有
+ * 「主动核对」的接口；这条路由只读后端自己的存储、不询问支付宝，因此
+ * 轮询代价很低。页面在后台时跳过请求，回到前台立即补一次；单次失败
+ * （网络抖动、网关错误）不会中断轮询，下一轮继续。
  */
 export const startOrderPolling = ({
   orderId,

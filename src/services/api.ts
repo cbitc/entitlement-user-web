@@ -45,23 +45,12 @@ export const createCheckout = (params: { product: string; edition: string }) =>
 /**
  * 读取单笔订单，用于展示二维码时轮询支付结果。
  *
- * 后端只读自己的存储、不询问支付宝，因此轮询可以很频繁。
+ * 付款由支付宝异步通知后端、或后端对账轮询来确认，前端只能读到结果；
+ * 这条路由只读后端自己的存储、不询问支付宝，因此轮询可以很频繁。
  */
 export const getOrder = (orderId: string) =>
   request
     .get<OrderSummary>(`/billing/orders/${encodeURIComponent(orderId)}`)
-    .then((res) => res.data);
-
-/**
- * 主动向支付宝查询这笔订单是否已付款（买家点「我已支付」时调用）。
- *
- * 它会真的请求支付宝，不能用来轮询。
- */
-export const checkOrderPayment = (orderId: string) =>
-  request
-    .post<OrderSummary>(
-      `/billing/orders/${encodeURIComponent(orderId)}/payment-check`,
-    )
     .then((res) => res.data);
 
 /** 当前用户的订单记录（按创建时间倒序）。 */

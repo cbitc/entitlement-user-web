@@ -68,13 +68,23 @@ export interface CatalogResponse {
 
 // -- billing ----------------------------------------------------------------
 
-/** 订单生命周期：REFUNDED 为后端预留状态，暂无接口产生。 */
-export type OrderStatus =
-  | 'PENDING'
-  | 'PAID'
-  | 'FAILED'
-  | 'EXPIRED'
-  | 'REFUNDED';
+/**
+ * 订单生命周期，与后端 `OrderStatus` 一致。
+ *
+ * 终态有三种：`PAID` 已支付；`EXPIRED` 是废弃的结账（支付宝在
+ * timeout_express 后关闭了未付款交易）；`FAILED` 是卖不出去的结账
+ * （网关拒绝、回调金额不符，或支付期间订阅被抢占）。
+ */
+export type OrderStatus = 'PENDING' | 'PAID' | 'EXPIRED' | 'FAILED';
+
+/** 下单失败的错误类型，与后端 `CreateCheckoutErrorType` 一一对应。 */
+export type CheckoutErrorType =
+  | 'UnknownEdition'
+  | 'EditionUnavailable'
+  | 'SubscriptionAlreadyActive'
+  | 'UnsupportedCurrency'
+  | 'EditionNotPurchasable'
+  | 'PaymentGatewayError';
 
 /** 下单结果：订单号与二维码内容（支付宝当面付预下单，买家扫码付款）。 */
 export interface CheckoutResponse {
