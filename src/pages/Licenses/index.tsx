@@ -1,10 +1,17 @@
-import { PageContainer, ProList } from '@ant-design/pro-components';
-import { App, Button, Empty, Space, Typography } from 'antd';
+import { PageContainer, ProTable } from '@ant-design/pro-components';
+import { App, Button, Empty, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import { listLicenses } from '@/services/api';
 import { displayProductName, useProductNames } from '@/services/catalog';
 import type { LicenseSummary } from '@/services/types';
 import { LicenseStatusTag } from './licenseStatus';
+
+/** 许可证详情页路径（产品/版本需转义）。 */
+const detailPath = (item: LicenseSummary) =>
+  `/licenses/${encodeURIComponent(item.product)}/${encodeURIComponent(item.edition)}`;
+
+/** 后端返回完整 ISO 时间，列表只展示到日。 */
+const toDate = (value: string) => value.slice(0, 10);
 
 export const LicensesPage = () => {
   const { message } = App.useApp();
@@ -12,8 +19,11 @@ export const LicensesPage = () => {
 
   return (
     <PageContainer title="我的许可证">
-      <ProList<LicenseSummary>
+      <ProTable<LicenseSummary>
         rowKey={(item) => `${item.product}/${item.edition}`}
+        search={false}
+        options={{ reload: true, density: false, setting: true }}
+        pagination={{ pageSize: 10 }}
         request={async () => {
           try {
             const data = await listLicenses();
@@ -22,41 +32,6 @@ export const LicensesPage = () => {
             message.error(error instanceof Error ? error.message : '加载许可证失败');
             return { data: [], success: false };
           }
-        }}
-        metas={{
-          title: {
-            render: (_, item) => (
-              <Link to={`/licenses/${encodeURIComponent(item.product)}/${encodeURIComponent(item.edition)}`}>
-                {displayProductName(productNames, item.product)} · {item.edition}
-              </Link>
-            ),
-          },
-          description: {
-            render: (_, item) => (
-              <Typography.Text type="secondary">
-                订阅周期：{item.periodStart.slice(0, 10)} ~ {item.periodEnd.slice(0, 10)}
-              </Typography.Text>
-            ),
-          },
-          content: {
-            render: (_, item) => (
-              <Typography.Text>
-                激活设备：{item.activations.length} / {item.maxActivations}
-              </Typography.Text>
-            ),
-          },
-          extra: {
-            render: (_: unknown, item: LicenseSummary) => (
-              <Space>
-                <LicenseStatusTag license={item} />
-                <Link
-                  to={`/licenses/${encodeURIComponent(item.product)}/${encodeURIComponent(item.edition)}`}
-                >
-                  <Button size="small">管理设备</Button>
-                </Link>
-              </Space>
-            ),
-          },
         }}
         locale={{
           emptyText: (
@@ -67,6 +42,55 @@ export const LicensesPage = () => {
             </Empty>
           ),
         }}
+        columns={[
+          {
+            title: '产品',
+            dataIndex: 'product',
+            width: 200,
+            ellipsis: true,
+            render: (_: unknown, item: LicenseSummary) => (
+              <Link to={detailPath(item)}>
+                {displayProductName(productNames, item.product)}
+              </Link>
+            ),
+          },
+          { title: '版本', dataIndex: 'edition', width: 120 },
+          {
+            title: '状态',
+            width: 120,
+            render: (_: unknown, item: LicenseSummary) => (
+              <LicenseStatusTag license={item} />
+            ),
+          },
+          {
+            title: '订阅周期',
+            width: 220,
+            render: (_: unknown, item: LicenseSummary) => (
+              <Typography.Text>
+                {toDate(item.periodStart)} ~ {toDate(item.periodEnd)}
+              </Typography.Text>
+            ),
+          },
+          {
+            title: '激活设备',
+            width: 120,
+            render: (_: unknown, item: LicenseSummary) => (
+              <Typography.Text>
+                {item.activations.length} / {item.maxActivations}
+              </Typography.Text>
+            ),
+          },
+          {
+            title: '操作',
+            valueType: 'option',
+            width: 120,
+            render: (_: unknown, item: LicenseSummary) => (
+              <Link to={detailPath(item)}>
+                <Button size="small">管理设备</Button>
+              </Link>
+            ),
+          },
+        ]}
       />
     </PageContainer>
   );

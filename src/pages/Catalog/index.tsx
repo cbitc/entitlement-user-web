@@ -8,7 +8,10 @@ import type { CatalogEdition, CatalogProduct } from '@/services/types';
 import { formatDuration, formatMoney } from '@/utils/money';
 
 interface EditionCard extends CatalogEdition {
+  /** 该产品已有生效订阅：同产品的其它版本也不能再买（后端按产品判定）。 */
   readonly subscribed: boolean;
+  /** 用户订阅的正是这一个版本（仅用于区分标签文案）。 */
+  readonly owned: boolean;
 }
 
 /** 目录产品加上本用户各版本的订阅状态。 */
@@ -24,18 +27,22 @@ export const CatalogPage = () => {
   useEffect(() => {
     Promise.all([listCatalog(), listLicenses()])
       .then(([catalog, licenses]) => {
-        // 已生效订阅的版本不再允许重复购买（后端也会返回 409）。
-        const activeKeys = new Set(
-          licenses.licenses
-            .filter((item) => new Date(item.periodEnd).getTime() > Date.now())
-            .map((item) => `${item.product}/${item.edition}`),
+        // 同一产品的月付/年付版本互为替代：任一版本在有效期内，整个产品都
+        // 不允许再购买（后端同样按产品判定并返回 409）。
+        const active = licenses.licenses.filter(
+          (item) => new Date(item.periodEnd).getTime() > Date.now(),
+        );
+        const activeProducts = new Set(active.map((item) => item.product));
+        const ownedEditions = new Set(
+          active.map((item) => `${item.product}/${item.edition}`),
         );
         setProducts(
           catalog.products.map((product) => ({
             ...product,
             editions: product.editions.map((edition) => ({
               ...edition,
-              subscribed: activeKeys.has(`${product.code}/${edition.code}`),
+              subscribed: activeProducts.has(product.code),
+              owned: ownedEditions.has(`${product.code}/${edition.code}`),
             })),
           })),
         );
@@ -94,7 +101,7 @@ export const CatalogPage = () => {
                           {card.code}
                           {card.subscribed && (
                             <Tag color="success" style={{ marginLeft: 8 }}>
-                              已订阅
+                              {card.owned ? '已订阅' : '该产品已订阅'}
                             </Tag>
                           )}
                         </Typography.Title>

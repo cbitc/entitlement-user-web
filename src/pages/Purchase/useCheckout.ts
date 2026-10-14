@@ -14,7 +14,7 @@ export const CHECKOUT_ERROR_MESSAGES: Readonly<
   EditionUnavailable: '该版本已下架，无法购买',
   UnsupportedCurrency: '该版本不是人民币定价，暂不支持在线购买',
   EditionNotPurchasable: '该版本无法通过支付购买',
-  SubscriptionAlreadyActive: '你已订阅该版本且仍在有效期内，无需重复购买',
+  SubscriptionAlreadyActive: '你已订阅该产品且仍在有效期内，无需重复购买',
   PaymentGatewayError: '支付宝暂时不可用，请稍后重试',
 };
 

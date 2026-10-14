@@ -1,6 +1,6 @@
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import { ProLayout } from '@ant-design/pro-components';
-import { Avatar, Dropdown, theme } from 'antd';
+import { Dropdown, theme } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/stores/useAuth';
 
@@ -55,7 +55,6 @@ export const BasicLayout = () => {
           </Dropdown>
         ),
       }}
-      actionsRender={() => [<Avatar key="avatar" size="small" icon={<UserOutlined />} />]}
     >
       <Outlet />
     </ProLayout>
