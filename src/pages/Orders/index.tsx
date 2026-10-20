@@ -1,14 +1,19 @@
 import { PageContainer, ProTable } from '@ant-design/pro-components';
-import { App, Tag, Typography } from 'antd';
+import { App, Space, Tag, Typography } from 'antd';
 import { listOrders } from '@/services/api';
 import { ORDER_STATUS_LABELS } from '@/services/billing';
-import { displayProductName, useProductNames } from '@/services/catalog';
+import {
+  displayProductName,
+  findCatalogPlan,
+  useCatalogIndex,
+} from '@/services/catalog';
+import { formatInterval } from '@/services/subscription';
 import type { OrderSummary } from '@/services/types';
 import { formatMoney } from '@/utils/money';
 
 export const OrdersPage = () => {
   const { message } = App.useApp();
-  const productNames = useProductNames();
+  const index = useCatalogIndex();
 
   return (
     <PageContainer title="我的订单">
@@ -39,9 +44,21 @@ export const OrdersPage = () => {
             title: '产品',
             width: 140,
             render: (_: unknown, record: OrderSummary) =>
-              displayProductName(productNames, record.product),
+              displayProductName(index, record.product),
           },
-          { title: '版本', dataIndex: 'edition', width: 140 },
+          {
+            title: '套餐',
+            width: 200,
+            render: (_: unknown, record: OrderSummary) => {
+              const plan = findCatalogPlan(index, record.product, record.plan);
+              return (
+                <Space size={6} wrap>
+                  {plan && <Tag color="geekblue">{formatInterval(plan.interval)}</Tag>}
+                  <Typography.Text>{record.plan}</Typography.Text>
+                </Space>
+              );
+            },
+          },
           {
             title: '金额',
             width: 140,
@@ -63,13 +80,20 @@ export const OrdersPage = () => {
               new Date(record.createdAt).toLocaleString(),
           },
           {
+            title: '支付截止',
+            width: 200,
+            render: (_: unknown, record: OrderSummary) => (
+              <Typography.Text type={record.status === 'PENDING' ? undefined : 'secondary'}>
+                {new Date(record.expiresAt).toLocaleString()}
+              </Typography.Text>
+            ),
+          },
+          {
             title: '支付时间',
             width: 200,
             render: (_: unknown, record: OrderSummary) => (
               <Typography.Text type={record.paidAt ? undefined : 'secondary'}>
-                {record.paidAt
-                  ? new Date(record.paidAt).toLocaleString()
-                  : '—'}
+                {record.paidAt ? new Date(record.paidAt).toLocaleString() : '—'}
               </Typography.Text>
             ),
           },

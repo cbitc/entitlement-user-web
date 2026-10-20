@@ -6,6 +6,8 @@ interface QrPaymentPanelProps {
   readonly intent: CheckoutResponse;
   /** 已格式化的应付金额。 */
   readonly amountLabel: string;
+  /** 支付窗口截止时间（ISO）；尚未拿到订单时为 null。 */
+  readonly expiresAt: string | null;
   readonly onReset: () => void;
 }
 
@@ -13,11 +15,13 @@ interface QrPaymentPanelProps {
  * 扫码支付面板：展示订单信息与支付宝二维码。
  *
  * 付款确认完全由后端完成，本页不做任何跳转，也没有「我已支付」这类主动
- * 核对按钮——只提示买家付款并等待页面自动更新。
+ * 核对按钮——只提示买家付款并等待页面自动更新。支付截止时间来自订单
+ * 读模型，到点后页面会切换到二维码失效结果。
  */
 export const QrPaymentPanel = ({
   intent,
   amountLabel,
+  expiresAt,
   onReset,
 }: QrPaymentPanelProps) => (
   <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -26,6 +30,11 @@ export const QrPaymentPanel = ({
       <Descriptions.Item label="订单号">
         <Typography.Text copyable>{intent.orderId}</Typography.Text>
       </Descriptions.Item>
+      {expiresAt && (
+        <Descriptions.Item label="支付截止">
+          {new Date(expiresAt).toLocaleString()}
+        </Descriptions.Item>
+      )}
       <Descriptions.Item label="支付方式">支付宝扫码</Descriptions.Item>
     </Descriptions>
 
@@ -48,7 +57,7 @@ export const QrPaymentPanel = ({
     <Alert
       type="info"
       showIcon
-      message="支付完成后本页会自动更新，请勿关闭页面。二维码有有效期，若已过期请重新下单生成新的二维码。"
+      message="支付完成后本页会自动更新，请勿关闭页面。二维码在支付截止时间后失效，若已过期请重新下单生成新的二维码。"
     />
 
     <Space>

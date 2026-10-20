@@ -38,6 +38,9 @@ export interface OrderPollingOptions {
  * 「主动核对」的接口；这条路由只读后端自己的存储、不询问支付宝，因此
  * 轮询代价很低。页面在后台时跳过请求，回到前台立即补一次；单次失败
  * （网络抖动、网关错误）不会中断轮询，下一轮继续。
+ *
+ * 订单读模型带 `expiresAt`：越过支付截止时间后不再轮询，因为该笔交易
+ * 已无法支付（后端清扫会把它置为 EXPIRED）。
  */
 export const startOrderPolling = ({
   orderId,
@@ -67,7 +70,12 @@ export const startOrderPolling = ({
           return;
         }
         onOrder(order);
-        if (SETTLED_ORDER_STATUSES.includes(order.status)) {
+        const paymentWindowClosed =
+          Date.now() >= new Date(order.expiresAt).getTime();
+        if (
+          SETTLED_ORDER_STATUSES.includes(order.status) ||
+          paymentWindowClosed
+        ) {
           return;
         }
       }

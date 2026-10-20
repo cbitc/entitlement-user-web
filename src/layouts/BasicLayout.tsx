@@ -22,7 +22,7 @@ export const BasicLayout = () => {
       route={{
         path: '/',
         routes: [
-          { path: '/licenses', name: '我的许可证' },
+          { path: '/subscriptions', name: '我的订阅' },
           { path: '/catalog', name: '产品目录' },
           { path: '/orders', name: '我的订单' },
         ],

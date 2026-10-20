@@ -2,11 +2,10 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { RequireAuth } from '@/components/RequireAuth';
 import { BasicLayout } from '@/layouts/BasicLayout';
 import { CatalogPage } from '@/pages/Catalog';
-import { LicenseDetailPage } from '@/pages/LicenseDetail';
-import { LicensesPage } from '@/pages/Licenses';
 import { LoginPage } from '@/pages/Login';
 import { OrdersPage } from '@/pages/Orders';
 import { PurchasePage } from '@/pages/Purchase';
+import { SubscriptionsPage } from '@/pages/Subscriptions';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -16,17 +15,16 @@ const router = createBrowserRouter([
       {
         element: <BasicLayout />,
         children: [
-          { path: '/', element: <Navigate to="/licenses" replace /> },
-          { path: '/licenses', element: <LicensesPage /> },
-          { path: '/licenses/:product/:edition', element: <LicenseDetailPage /> },
+          { path: '/', element: <Navigate to="/subscriptions" replace /> },
+          { path: '/subscriptions', element: <SubscriptionsPage /> },
           { path: '/catalog', element: <CatalogPage /> },
-          { path: '/purchase/:product/:edition', element: <PurchasePage /> },
+          { path: '/purchase/:product/:plan', element: <PurchasePage /> },
           { path: '/orders', element: <OrdersPage /> },
         ],
       },
     ],
   },
-  { path: '*', element: <Navigate to="/licenses" replace /> },
+  { path: '*', element: <Navigate to="/subscriptions" replace /> },
 ]);
 
 export default function App() {

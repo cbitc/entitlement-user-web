@@ -6,6 +6,8 @@ import type {
   OrderListResponse,
   OrderSummary,
   RequestLoginResponse,
+  SubscriptionListResponse,
+  TrialResponse,
   VerifyLoginResponse,
 } from './types';
 
@@ -21,23 +23,47 @@ export const verifyLogin = (email: string, code: string) =>
     .post<VerifyLoginResponse>('/auth/verify-login', { email, code })
     .then((res) => res.data);
 
-/** 当前用户的全部许可证（含激活设备）。 */
+/** 当前用户的全部许可证（按产品唯一，含激活设备）。 */
 export const listLicenses = () =>
   request.get<LicenseListResponse>('/licensing/licenses').then((res) => res.data);
 
-/** 远程停用某台设备的激活。 */
+/** 远程停用某台设备的激活（许可证按产品定位）。 */
 export const deactivateDevice = (params: {
   product: string;
-  edition: string;
   machineId: string;
 }) => request.post<void>('/licensing/licenses/deactivate', params).then(() => undefined);
 
-/** 产品目录（可订阅的产品/版本，含定价）。 */
+/** 可售产品目录（产品 + 套餐定价），归属 subscription 模块。 */
 export const listCatalog = () =>
-  request.get<CatalogResponse>('/licensing/catalog').then((res) => res.data);
+  request.get<CatalogResponse>('/subscription/catalog').then((res) => res.data);
+
+/** 当前用户的全部订阅合同（最新在前）。 */
+export const listSubscriptions = () =>
+  request
+    .get<SubscriptionListResponse>('/subscription/subscriptions')
+    .then((res) => res.data);
+
+/**
+ * 取消订阅：默认在当期结束时失效（`immediate: false`），
+ * `immediate: true` 立即取消并立刻收回许可证。
+ */
+export const cancelSubscription = (params: {
+  subscriptionId: string;
+  immediate?: boolean;
+}) =>
+  request
+    .post<unknown>(
+      `/subscription/subscriptions/${encodeURIComponent(params.subscriptionId)}/cancel`,
+      { immediate: params.immediate ?? false },
+    )
+    .then(() => undefined);
+
+/** 开始试用：不产生订单与支付，直接创建 TRIALING 订阅。 */
+export const startTrial = (params: { product: string; plan: string }) =>
+  request.post<TrialResponse>('/subscription/trials', params).then((res) => res.data);
 
 /** 下单：创建订单并向支付宝预下单，返回二维码内容。 */
-export const createCheckout = (params: { product: string; edition: string }) =>
+export const createCheckout = (params: { product: string; plan: string }) =>
   request
     .post<CheckoutResponse>('/billing/checkout', params)
     .then((res) => res.data);

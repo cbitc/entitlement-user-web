@@ -67,7 +67,7 @@ export const LoginPage = () => {
       }
       const res = await verifyLogin(email, values.code ?? '');
       login(res.token);
-      const from = (location.state as { from?: string } | null)?.from ?? '/licenses';
+      const from = (location.state as { from?: string } | null)?.from ?? '/subscriptions';
       navigate(from, { replace: true });
     } catch (error) {
       message.error(toMessage(error, '登录失败，请重试'));

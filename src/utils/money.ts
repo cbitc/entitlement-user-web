@@ -9,14 +9,3 @@ export const formatMoney = (amountCents: number, currency: string): string => {
     return `${(amountCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
   }
 };
-
-/** 订阅时长的人类可读形式。 */
-export const formatDuration = (days: number): string => {
-  if (days > 0 && days % 365 === 0) {
-    return `${days / 365} 年`;
-  }
-  if (days > 0 && days % 30 === 0) {
-    return `${days / 30} 个月`;
-  }
-  return `${days} 天`;
-};

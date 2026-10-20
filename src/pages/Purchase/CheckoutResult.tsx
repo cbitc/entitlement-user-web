@@ -12,17 +12,17 @@ interface CheckoutResultProps {
   readonly onReset: () => void;
 }
 
-/** 三种支付结果视图。成功页引导去激活设备，未支付页引导重新下单。 */
+/** 三种支付结果视图。成功页引导去订阅页，未支付页引导重新下单。 */
 export const CheckoutResult = ({ variant, onReset }: CheckoutResultProps) => {
   if (variant.kind === 'paid') {
     return (
       <Result
         status="success"
         title="订阅已开通"
-        subTitle="许可证已发放，现在就可以激活你的设备了。"
+        subTitle="订阅已生效，许可证会在几秒内发放；随后即可在「我的订阅」中激活设备。"
         extra={[
-          <Link to="/licenses" key="licenses">
-            <Button type="primary">查看我的许可证</Button>
+          <Link to="/subscriptions" key="subscriptions">
+            <Button type="primary">查看我的订阅</Button>
           </Link>,
           <Link to="/orders" key="orders">
             <Button>查看订单</Button>
@@ -63,6 +63,9 @@ export const CheckoutResult = ({ variant, onReset }: CheckoutResultProps) => {
         </Button>,
         <Link to="/catalog" key="catalog">
           <Button>返回产品目录</Button>
+        </Link>,
+        <Link to="/orders" key="orders">
+          <Button type="link">查看订单</Button>
         </Link>,
       ]}
     />

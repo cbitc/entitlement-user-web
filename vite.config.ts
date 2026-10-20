@@ -28,6 +28,8 @@ export default defineConfig({
     proxy: {
       '/auth': { target: API_TARGET, changeOrigin: true },
       '/licensing': { target: API_TARGET, changeOrigin: true },
+      // 仅代理后端路径：`/subscriptions` 是前端路由，不能被前缀匹配吞掉。
+      '^/subscription/': { target: API_TARGET, changeOrigin: true },
       '/billing': { target: API_TARGET, changeOrigin: true },
     },
   },
