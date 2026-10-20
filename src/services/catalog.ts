@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import { listCatalog } from './api';
-import type { CatalogPlan, CatalogProduct } from './types';
+import type {
+  CatalogPlan,
+  CatalogProduct,
+  PlanInterval,
+  PlanPrice,
+} from './types';
 
-/** 目录索引：产品与其套餐，供订单/订阅页补全可读名称与周期。 */
+/** 目录索引：产品与其版本，供订单/订阅页补全可读名称。 */
 export interface CatalogIndex {
   readonly products: ReadonlyArray<CatalogProduct>;
   readonly productByCode: ReadonlyMap<string, CatalogProduct>;
@@ -77,9 +82,16 @@ export const displayProductName = (
   code: string,
 ): string => index.productByCode.get(code)?.displayName ?? code;
 
-/** 按 (产品, 套餐) 查找目录中的定价信息；缺失时返回 undefined。 */
+/** 按 (产品, 版本) 查找目录中的版本；缺失时返回 undefined。 */
 export const findCatalogPlan = (
   index: CatalogIndex,
   product: string,
   plan: string,
 ): CatalogPlan | undefined => index.planByKey.get(planKey(product, plan));
+
+/** 在版本中查找某个计费周期的报价；该周期未出售时返回 undefined。 */
+export const findPlanPrice = (
+  plan: CatalogPlan | undefined,
+  interval: PlanInterval,
+): PlanPrice | undefined =>
+  plan?.prices.find((price) => price.interval === interval);

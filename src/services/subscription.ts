@@ -12,7 +12,7 @@ export const ENTITLED_STATUSES: ReadonlyArray<SubscriptionStatus> = [
   'ACTIVE',
 ];
 
-/** 仍占用产品的状态：开放合同既不能重复试用，也不能被其它套餐绕过。 */
+/** 仍占用产品的状态：开放合同不能重复试用；再次购买会续费或切换版本。 */
 export const OPEN_STATUSES: ReadonlyArray<SubscriptionStatus> = [
   'TRIALING',
   'ACTIVE',
@@ -34,6 +34,9 @@ export const PLAN_INTERVAL_LABELS: Readonly<Record<PlanInterval, string>> = {
   MONTH: '月付',
   YEAR: '年付',
 };
+
+/** 目录页的分组顺序：月付在前，年付在后。 */
+export const PLAN_INTERVALS: ReadonlyArray<PlanInterval> = ['MONTH', 'YEAR'];
 
 /** 与后端 `planIntervalDays` 一致：按固定天数折算，不建模自然月。 */
 export const PLAN_INTERVAL_DAYS: Readonly<Record<PlanInterval, number>> = {
@@ -75,34 +78,17 @@ export const hasOpenCoverage = (
       subscription.items.some((item) => item.product === product),
   );
 
-/**
- * 已付费（ACTIVE）或被暂停（FROZEN）的订阅占用该产品，会阻止再次购买；
- * TRIALING 不阻止购买，买入即转正。
- */
-export const hasPaidCoverage = (
-  subscriptions: ReadonlyArray<SubscriptionSummary>,
-  product: string,
-  now: number = Date.now(),
-): boolean =>
-  subscriptions.some(
-    (subscription) =>
-      (subscription.status === 'ACTIVE' ||
-        subscription.status === 'FROZEN') &&
-      new Date(subscription.periodEnd).getTime() >= now &&
-      subscription.items.some((item) => item.product === product),
-  );
-
 /** 目录页所需的单产品覆盖情况。 */
 export interface ProductCoverage {
   /** 任一开放订阅占用（试用/有效/冻结），阻断再次试用。 */
   readonly hasOpen: boolean;
-  /** ACTIVE/FROZEN 占用，阻断购买（月付/年付互斥）。 */
+  /** ACTIVE/FROZEN 占用；仅用于展示已订阅状态，购买会续费或切换版本。 */
   readonly hasPaid: boolean;
   /** 当前处于试用期。 */
   readonly isTrialing: boolean;
   /** 当前被管理员冻结。 */
   readonly isFrozen: boolean;
-  /** 占用该产品的开放订阅项所用套餐代码。 */
+  /** 占用该产品的开放订阅项所用版本代码。 */
   readonly planCodes: ReadonlySet<string>;
 }
 
@@ -147,8 +133,9 @@ export const toDate = (iso: string): string => iso.slice(0, 10);
 
 /** 试用失败错误 → 中文提示。 */
 export const TRIAL_ERROR_MESSAGES: Readonly<Record<TrialErrorType, string>> = {
-  UnknownPlan: '该套餐不存在',
-  PlanUnavailable: '该套餐已下架，无法试用',
-  TrialNotAvailable: '该套餐不提供免费试用',
+  UnknownPlan: '该版本不存在',
+  PlanUnavailable: '该版本已下架，无法试用',
+  TrialNotAvailable: '该版本不提供免费试用',
+  TrialAlreadyUsed: '该产品已使用过试用，每个账号每个产品只能试用一次',
   SubscriptionAlreadyActive: '该产品已有订阅或试用，无法重复试用',
 };

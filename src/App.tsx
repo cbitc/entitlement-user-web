@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import { RequireAuth } from '@/components/RequireAuth';
 import { BasicLayout } from '@/layouts/BasicLayout';
 import { CatalogPage } from '@/pages/Catalog';
+import { CheckoutResultPage } from '@/pages/CheckoutResult';
 import { LoginPage } from '@/pages/Login';
 import { OrdersPage } from '@/pages/Orders';
 import { PurchasePage } from '@/pages/Purchase';
@@ -18,7 +19,8 @@ const router = createBrowserRouter([
           { path: '/', element: <Navigate to="/subscriptions" replace /> },
           { path: '/subscriptions', element: <SubscriptionsPage /> },
           { path: '/catalog', element: <CatalogPage /> },
-          { path: '/purchase/:product/:plan', element: <PurchasePage /> },
+          { path: '/purchase/:product/:plan/:interval', element: <PurchasePage /> },
+          { path: '/checkout/result', element: <CheckoutResultPage /> },
           { path: '/orders', element: <OrdersPage /> },
         ],
       },

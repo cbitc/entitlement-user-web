@@ -1,6 +1,6 @@
 import { AppstoreOutlined, LinkOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import { PageContainer, ProCard } from '@ant-design/pro-components';
-import { App, Avatar, Button, Col, Empty, Row, Space, Spin, Tag, Typography } from 'antd';
+import { App, Avatar, Button, Col, Divider, Empty, Row, Space, Spin, Tag, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { listSubscriptions, startTrial } from '@/services/api';
@@ -8,6 +8,7 @@ import { loadCatalogIndex, type CatalogIndex } from '@/services/catalog';
 import { ApiError } from '@/services/request';
 import {
   PLAN_INTERVAL_DAYS,
+  PLAN_INTERVALS,
   TRIAL_ERROR_MESSAGES,
   formatInterval,
   productCoverage,
@@ -67,8 +68,10 @@ export const CatalogPage = () => {
     const key = `${product}/${plan.code}`;
     setTrialKey(key);
     try {
-      await startTrial({ product, plan: plan.code });
-      message.success('试用已开始，许可证将在几秒内发放');
+      const trial = await startTrial({ product, plan: plan.code });
+      message.success(
+        `试用已开始，最多可在 ${trial.trialMaxActivations} 台设备上激活`,
+      );
       navigate('/subscriptions');
     } catch (error) {
       if (error instanceof ApiError && error.type in TRIAL_ERROR_MESSAGES) {
@@ -135,44 +138,53 @@ export const CatalogPage = () => {
               {product.coverage.hasPaid && (
                 <Typography.Paragraph type="warning">
                   {product.coverage.isFrozen
-                    ? '该产品的订阅已被管理员暂停，权益暂不可用；暂停期间无法重复购买，如需恢复请联系管理员。'
-                    : '你已订阅该产品。同一产品的月付/年付套餐互为替代，当前订阅结束前无法再次购买。'}
+                    ? '该产品的订阅已被管理员暂停，权益暂不可用；购买会续费或切换版本，如需恢复请联系管理员。'
+                    : '你已订阅该产品；再次购买会续费，或把版本切换为所选版本。'}
                 </Typography.Paragraph>
               )}
               {!product.coverage.hasPaid && product.coverage.isTrialing && (
                 <Typography.Paragraph type="secondary">
-                  该产品正在试用中，购买任一付费套餐即可立即转为正式订阅。
+                  该产品正在试用中，购买任一付费版本即可转为正式订阅，或切换到其他版本。
                 </Typography.Paragraph>
               )}
               <Row gutter={[16, 16]}>
                 {product.plans.map((plan) => {
-                  const key = `${product.code}/${plan.code}`;
                   const owned = product.coverage.planCodes.has(plan.code);
-                  const trialAvailable =
-                    plan.trialDays > 0 && !product.coverage.hasOpen;
-                  const showTag =
-                    owned ||
-                    product.coverage.hasPaid ||
-                    product.coverage.isTrialing;
                   const tagLabel = owned
                     ? product.coverage.isTrialing
                       ? '试用中'
                       : product.coverage.isFrozen
                         ? '已冻结'
                         : '已订阅'
-                    : product.coverage.hasPaid
-                      ? product.coverage.isFrozen
-                        ? '该产品已冻结'
-                        : '该产品已订阅'
-                      : '该产品试用中';
+                    : null;
+                  const actionLabel = owned
+                    ? product.coverage.isTrialing
+                      ? '升级为付费'
+                      : '续费'
+                    : product.coverage.hasPaid || product.coverage.isTrialing
+                      ? '切换到此版本'
+                      : '订阅';
+                  const prices = PLAN_INTERVALS.flatMap((interval) => {
+                    const price = plan.prices.find(
+                      (item) => item.interval === interval,
+                    );
+                    return price ? [price] : [];
+                  });
+                  const trialKeyForPlan = `${product.code}/${plan.code}`;
 
                   return (
-                    <Col key={key} xs={24} sm={12} md={8}>
-                      <ProCard bordered hoverable style={{ height: '100%' }}>
-                        <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                    <Col
+                      key={plan.code}
+                      xs={24}
+                      sm={12}
+                      md={8}
+                      style={{ display: 'flex' }}
+                    >
+                      <ProCard bordered hoverable style={{ width: '100%' }}>
+                        <Space direction="vertical" size={12} style={{ width: '100%' }}>
                           <Typography.Title level={4} style={{ margin: 0 }}>
                             {plan.code}
-                            {showTag && (
+                            {tagLabel && (
                               <Tag
                                 color={product.coverage.isFrozen ? 'warning' : 'success'}
                                 style={{ marginLeft: 8 }}
@@ -181,40 +193,68 @@ export const CatalogPage = () => {
                               </Tag>
                             )}
                           </Typography.Title>
-                          <Space size={6}>
-                            <Tag color="geekblue">{formatInterval(plan.interval)}</Tag>
-                            <Typography.Text type="secondary">
-                              每 {PLAN_INTERVAL_DAYS[plan.interval]} 天
-                            </Typography.Text>
-                          </Space>
-                          <Typography.Text strong>
-                            {formatMoney(plan.priceCents, plan.currency)}
-                          </Typography.Text>
-                          {plan.trialDays > 0 && (
-                            <Typography.Text type="secondary">
-                              含 {plan.trialDays} 天免费试用
-                            </Typography.Text>
-                          )}
-                          {product.coverage.hasPaid ? (
-                            <Link to="/subscriptions">
-                              <Button>查看订阅</Button>
-                            </Link>
-                          ) : (
-                            <Space wrap>
-                              <Link
-                                to={`/purchase/${encodeURIComponent(product.code)}/${encodeURIComponent(plan.code)}`}
+                          {prices.map((price, index) => (
+                            <div key={price.interval}>
+                              {index > 0 && (
+                                <Divider style={{ margin: '4px 0 12px' }} />
+                              )}
+                              <Space
+                                direction="vertical"
+                                size={6}
+                                style={{ width: '100%' }}
                               >
-                                <Button type="primary">
-                                  {product.coverage.isTrialing ? '升级为付费' : '订阅'}
-                                </Button>
-                              </Link>
-                              {trialAvailable && (
+                                <div
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 8,
+                                  }}
+                                >
+                                  <Tag
+                                    color="geekblue"
+                                    style={{ marginInlineEnd: 0 }}
+                                  >
+                                    {formatInterval(price.interval)}
+                                  </Tag>
+                                  <Typography.Text
+                                    strong
+                                    style={{ whiteSpace: 'nowrap' }}
+                                  >
+                                    {formatMoney(price.priceCents, price.currency)}
+                                  </Typography.Text>
+                                </div>
+                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                  每 {PLAN_INTERVAL_DAYS[price.interval]} 天
+                                </Typography.Text>
+                                <Link
+                                  to={`/purchase/${encodeURIComponent(product.code)}/${encodeURIComponent(plan.code)}/${price.interval}`}
+                                >
+                                  <Button type="primary">{actionLabel}</Button>
+                                </Link>
+                              </Space>
+                            </div>
+                          ))}
+                          {plan.trial && (
+                            <Space
+                              direction="vertical"
+                              size={6}
+                              style={{ width: '100%' }}
+                            >
+                              <Divider style={{ margin: '4px 0 8px' }} />
+                              <Typography.Text type="secondary">
+                                含 {plan.trial.days} 天免费试用，最多{' '}
+                                {plan.trial.maxActivations} 台设备
+                              </Typography.Text>
+                              {!product.coverage.hasOpen && (
                                 <Button
                                   icon={<ThunderboltOutlined />}
-                                  loading={trialKey === key}
-                                  onClick={() => void handleTrial(product.code, plan)}
+                                  loading={trialKey === trialKeyForPlan}
+                                  onClick={() =>
+                                    void handleTrial(product.code, plan)
+                                  }
                                 >
-                                  开始试用
+                                  开始免费试用
                                 </Button>
                               )}
                             </Space>

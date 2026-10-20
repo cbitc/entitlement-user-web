@@ -6,7 +6,13 @@ import { authStore } from '@/stores/auth';
 export const RequireAuth = (): ReactElement => {
   const location = useLocation();
   if (!authStore.isAuthenticated()) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return (
+      <Navigate
+        to="/login"
+        replace
+        state={{ from: `${location.pathname}${location.search}${location.hash}` }}
+      />
+    );
   }
   return <Outlet />;
 };

@@ -122,11 +122,15 @@ export const SubscriptionsPage = () => {
             ),
           },
           {
-            title: '套餐',
+            title: '版本',
             width: 220,
             render: (_: unknown, row: SubscriptionRow) => (
               <Space size={6} wrap>
-                <Tag color="geekblue">{formatInterval(row.item.interval)}</Tag>
+                {row.item.kind === 'TRIAL' ? (
+                  <Tag color="processing">试用</Tag>
+                ) : (
+                  <Tag color="geekblue">{formatInterval(row.item.interval)}</Tag>
+                )}
                 <Typography.Text>{row.item.plan}</Typography.Text>
               </Space>
             ),
@@ -215,8 +219,12 @@ export const SubscriptionsPage = () => {
         {deviceRow && (
           <Space direction="vertical" size={24} style={{ width: '100%' }}>
             <Descriptions column={2} size="small" bordered>
-              <Descriptions.Item label="套餐">
-                {deviceRow.item.plan}（{formatInterval(deviceRow.item.interval)}）
+              <Descriptions.Item label="版本">
+                {deviceRow.item.plan}（
+                {deviceRow.item.kind === 'TRIAL'
+                  ? '试用'
+                  : formatInterval(deviceRow.item.interval)}
+                ）
               </Descriptions.Item>
               <Descriptions.Item label="订阅状态">
                 <SubscriptionStatusTag subscription={deviceRow.subscription} />

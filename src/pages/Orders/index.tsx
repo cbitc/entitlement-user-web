@@ -1,13 +1,8 @@
 import { PageContainer, ProTable } from '@ant-design/pro-components';
-import { App, Space, Tag, Typography } from 'antd';
+import { App, Tag, Typography } from 'antd';
 import { listOrders } from '@/services/api';
 import { ORDER_STATUS_LABELS } from '@/services/billing';
-import {
-  displayProductName,
-  findCatalogPlan,
-  useCatalogIndex,
-} from '@/services/catalog';
-import { formatInterval } from '@/services/subscription';
+import { displayProductName, useCatalogIndex } from '@/services/catalog';
 import type { OrderSummary } from '@/services/types';
 import { formatMoney } from '@/utils/money';
 
@@ -47,17 +42,11 @@ export const OrdersPage = () => {
               displayProductName(index, record.product),
           },
           {
-            title: '套餐',
-            width: 200,
-            render: (_: unknown, record: OrderSummary) => {
-              const plan = findCatalogPlan(index, record.product, record.plan);
-              return (
-                <Space size={6} wrap>
-                  {plan && <Tag color="geekblue">{formatInterval(plan.interval)}</Tag>}
-                  <Typography.Text>{record.plan}</Typography.Text>
-                </Space>
-              );
-            },
+            title: '版本',
+            width: 160,
+            render: (_: unknown, record: OrderSummary) => (
+              <Typography.Text>{record.plan}</Typography.Text>
+            ),
           },
           {
             title: '金额',

@@ -5,6 +5,7 @@ import type {
   LicenseListResponse,
   OrderListResponse,
   OrderSummary,
+  PlanInterval,
   RequestLoginResponse,
   SubscriptionListResponse,
   TrialResponse,
@@ -33,7 +34,7 @@ export const deactivateDevice = (params: {
   machineId: string;
 }) => request.post<void>('/licensing/licenses/deactivate', params).then(() => undefined);
 
-/** 可售产品目录（产品 + 套餐定价），归属 subscription 模块。 */
+/** 可售产品目录（产品 + 版本定价），归属 subscription 模块。 */
 export const listCatalog = () =>
   request.get<CatalogResponse>('/subscription/catalog').then((res) => res.data);
 
@@ -44,20 +45,24 @@ export const listSubscriptions = () =>
     .then((res) => res.data);
 
 /**
- * 开始试用：不产生订单与支付，直接创建 TRIALING 订阅。
- * 试用只要产品已有开放订阅（TRIALING/ACTIVE/FROZEN）就会被拒绝。
+ * 开始试用：试用策略挂在版本上，与计费周期无关；不产生订单与支付，
+ * 直接创建 TRIALING 订阅。已有开放订阅或已用过该产品的终身试用都会被拒绝。
  */
 export const startTrial = (params: { product: string; plan: string }) =>
   request.post<TrialResponse>('/subscription/trials', params).then((res) => res.data);
 
-/** 下单：创建订单并向支付宝预下单，返回二维码内容。 */
-export const createCheckout = (params: { product: string; plan: string }) =>
+/** 下单：创建订单并返回支付宝电脑网站支付的收银台地址。 */
+export const createCheckout = (params: {
+  product: string;
+  plan: string;
+  interval: PlanInterval;
+}) =>
   request
     .post<CheckoutResponse>('/billing/checkout', params)
     .then((res) => res.data);
 
 /**
- * 读取单笔订单，用于展示二维码时轮询支付结果。
+ * 读取单笔订单，用于支付结果页轮询支付结果。
  *
  * 付款由支付宝异步通知后端、或后端对账轮询来确认，前端只能读到结果；
  * 这条路由只读后端自己的存储、不询问支付宝，因此轮询可以很频繁。
