@@ -17,7 +17,7 @@ export const CHECKOUT_ERROR_MESSAGES: Readonly<
 > = {
   UnknownPlan: '该套餐不存在',
   PlanUnavailable: '该套餐已下架，无法购买',
-  SubscriptionAlreadyActive: '你已订阅该产品且仍在有效期内，无需重复购买',
+  SubscriptionAlreadyActive: '该产品已有订阅（含被暂停的订阅），无法重复购买',
   UnsupportedCurrency: '该套餐不是人民币定价，暂不支持在线购买',
   PlanNotPurchasable: '该套餐无法通过支付购买',
   PaymentGatewayError: '支付宝暂时不可用，请稍后重试',

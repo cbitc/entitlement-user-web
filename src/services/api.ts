@@ -44,21 +44,9 @@ export const listSubscriptions = () =>
     .then((res) => res.data);
 
 /**
- * 取消订阅：默认在当期结束时失效（`immediate: false`），
- * `immediate: true` 立即取消并立刻收回许可证。
+ * 开始试用：不产生订单与支付，直接创建 TRIALING 订阅。
+ * 试用只要产品已有开放订阅（TRIALING/ACTIVE/FROZEN）就会被拒绝。
  */
-export const cancelSubscription = (params: {
-  subscriptionId: string;
-  immediate?: boolean;
-}) =>
-  request
-    .post<unknown>(
-      `/subscription/subscriptions/${encodeURIComponent(params.subscriptionId)}/cancel`,
-      { immediate: params.immediate ?? false },
-    )
-    .then(() => undefined);
-
-/** 开始试用：不产生订单与支付，直接创建 TRIALING 订阅。 */
 export const startTrial = (params: { product: string; plan: string }) =>
   request.post<TrialResponse>('/subscription/trials', params).then((res) => res.data);
 

@@ -79,11 +79,9 @@ export interface CatalogResponse {
 // -- subscriptions ----------------------------------------------------------
 
 export type SubscriptionStatus =
-  | 'INCOMPLETE'
   | 'TRIALING'
   | 'ACTIVE'
-  | 'PAST_DUE'
-  | 'CANCELED'
+  | 'FROZEN'
   | 'EXPIRED';
 
 /** 订阅中的一项：合同快照，目录改价不会影响已有合同。 */
@@ -100,6 +98,8 @@ export interface SubscriptionItem {
 /**
  * 一份商业合同。一个订阅可包含多个产品项（管理员可创建），
  * 但同一产品的月付/年付互为替代，不会同时出现。
+ *
+ * 未支付的结账不会创建订阅：待支付状态只存在于订单上。
  */
 export interface SubscriptionSummary {
   readonly id: string;
@@ -108,8 +108,6 @@ export interface SubscriptionSummary {
   readonly periodEnd: string;
   /** 试用截止时间；非试用订阅为 null。 */
   readonly trialEnd: string | null;
-  /** 已申请期末取消：当前周期内仍可使用。 */
-  readonly cancelAtPeriodEnd: boolean;
   readonly createdAt: string;
   readonly items: ReadonlyArray<SubscriptionItem>;
 }
@@ -130,9 +128,6 @@ export type TrialErrorType =
   | 'PlanUnavailable'
   | 'TrialNotAvailable'
   | 'SubscriptionAlreadyActive';
-
-/** 取消订阅失败的错误类型。 */
-export type CancelErrorType = 'NotFound' | 'InvalidTransition';
 
 // -- billing ----------------------------------------------------------------
 

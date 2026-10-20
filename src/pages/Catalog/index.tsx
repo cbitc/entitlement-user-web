@@ -134,7 +134,9 @@ export const CatalogPage = () => {
               )}
               {product.coverage.hasPaid && (
                 <Typography.Paragraph type="warning">
-                  你已订阅该产品。同一产品的月付/年付套餐互为替代，当前订阅结束前无法再次购买。
+                  {product.coverage.isFrozen
+                    ? '该产品的订阅已被管理员暂停，权益暂不可用；暂停期间无法重复购买，如需恢复请联系管理员。'
+                    : '你已订阅该产品。同一产品的月付/年付套餐互为替代，当前订阅结束前无法再次购买。'}
                 </Typography.Paragraph>
               )}
               {!product.coverage.hasPaid && product.coverage.isTrialing && (
@@ -147,7 +149,7 @@ export const CatalogPage = () => {
                   const key = `${product.code}/${plan.code}`;
                   const owned = product.coverage.planCodes.has(plan.code);
                   const trialAvailable =
-                    plan.trialDays > 0 && !product.coverage.hasActive;
+                    plan.trialDays > 0 && !product.coverage.hasOpen;
                   const showTag =
                     owned ||
                     product.coverage.hasPaid ||
@@ -155,9 +157,13 @@ export const CatalogPage = () => {
                   const tagLabel = owned
                     ? product.coverage.isTrialing
                       ? '试用中'
-                      : '已订阅'
+                      : product.coverage.isFrozen
+                        ? '已冻结'
+                        : '已订阅'
                     : product.coverage.hasPaid
-                      ? '该产品已订阅'
+                      ? product.coverage.isFrozen
+                        ? '该产品已冻结'
+                        : '该产品已订阅'
                       : '该产品试用中';
 
                   return (
@@ -167,7 +173,10 @@ export const CatalogPage = () => {
                           <Typography.Title level={4} style={{ margin: 0 }}>
                             {plan.code}
                             {showTag && (
-                              <Tag color="success" style={{ marginLeft: 8 }}>
+                              <Tag
+                                color={product.coverage.isFrozen ? 'warning' : 'success'}
+                                style={{ marginLeft: 8 }}
+                              >
                                 {tagLabel}
                               </Tag>
                             )}

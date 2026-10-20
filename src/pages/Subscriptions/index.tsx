@@ -3,35 +3,21 @@ import {
   Alert,
   App,
   Button,
-  Checkbox,
   Descriptions,
   Drawer,
   Empty,
-  Modal,
   Popconfirm,
   Space,
   Tag,
   Typography,
 } from 'antd';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  cancelSubscription,
-  deactivateDevice,
-  listLicenses,
-  listSubscriptions,
-} from '@/services/api';
+import { deactivateDevice, listLicenses, listSubscriptions } from '@/services/api';
 import { displayProductName, useCatalogIndex } from '@/services/catalog';
-import { ApiError } from '@/services/request';
-import {
-  CANCEL_ERROR_MESSAGES,
-  formatInterval,
-  isActiveLike,
-  toDate,
-} from '@/services/subscription';
+import { formatInterval, isEntitled, toDate } from '@/services/subscription';
 import type {
   Activation,
-  CancelErrorType,
   LicenseSummary,
   SubscriptionItem,
   SubscriptionSummary,
@@ -54,19 +40,6 @@ export const SubscriptionsPage = () => {
   );
   const [loading, setLoading] = useState(true);
   const [deviceRow, setDeviceRow] = useState<SubscriptionRow | null>(null);
-  const [cancelRow, setCancelRow] = useState<SubscriptionRow | null>(null);
-  const [cancelImmediate, setCancelImmediate] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
-  const refreshTimer = useRef<number | null>(null);
-
-  useEffect(
-    () => () => {
-      if (refreshTimer.current !== null) {
-        window.clearTimeout(refreshTimer.current);
-      }
-    },
-    [],
-  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,44 +71,6 @@ export const SubscriptionsPage = () => {
     void load();
   }, [load]);
 
-  const openCancel = (row: SubscriptionRow) => {
-    setCancelRow(row);
-    // 已申请期末取消的订阅，再操作只可能是「立即取消」。
-    setCancelImmediate(row.subscription.cancelAtPeriodEnd);
-  };
-
-  const handleCancel = async () => {
-    if (!cancelRow) {
-      return;
-    }
-    setCancelling(true);
-    try {
-      await cancelSubscription({
-        subscriptionId: cancelRow.subscription.id,
-        immediate: cancelImmediate,
-      });
-      message.success(
-        cancelImmediate
-          ? '订阅已立即取消，许可证将随即收回'
-          : '已设置为期末取消，当前周期内仍可继续使用',
-      );
-      setCancelRow(null);
-      await load();
-      if (cancelImmediate) {
-        // 许可证由订阅事件投影异步收回，稍后补一次刷新。
-        refreshTimer.current = window.setTimeout(() => void load(), 1_500);
-      }
-    } catch (error) {
-      if (error instanceof ApiError && error.type in CANCEL_ERROR_MESSAGES) {
-        message.error(CANCEL_ERROR_MESSAGES[error.type as CancelErrorType]);
-      } else {
-        message.error(error instanceof Error ? error.message : '取消订阅失败，请稍后重试');
-      }
-    } finally {
-      setCancelling(false);
-    }
-  };
-
   const handleDeactivate = async (row: SubscriptionRow, machineId: string) => {
     try {
       await deactivateDevice({ product: row.item.product, machineId });
@@ -147,9 +82,18 @@ export const SubscriptionsPage = () => {
   };
 
   const activeLicense = deviceRow ? licenses.get(deviceRow.item.product) ?? null : null;
+  const hasFrozen = rows.some((row) => row.subscription.status === 'FROZEN');
 
   return (
     <PageContainer title="我的订阅">
+      {hasFrozen && (
+        <Alert
+          type="warning"
+          showIcon
+          style={{ marginBottom: 16 }}
+          message="部分订阅已被管理员暂停，权益暂时不可用；如需恢复请联系管理员。"
+        />
+      )}
       <ProTable<SubscriptionRow>
         rowKey="key"
         search={false}
@@ -189,7 +133,7 @@ export const SubscriptionsPage = () => {
           },
           {
             title: '状态',
-            width: 220,
+            width: 200,
             render: (_: unknown, row: SubscriptionRow) => (
               <SubscriptionStatusTag subscription={row.subscription} />
             ),
@@ -207,6 +151,11 @@ export const SubscriptionsPage = () => {
                     试用至 {toDate(row.subscription.trialEnd)}
                   </Typography.Text>
                 )}
+                {row.subscription.status === 'FROZEN' && (
+                  <Typography.Text type="secondary">
+                    周期仍在计时，{toDate(row.subscription.periodEnd)} 到期
+                  </Typography.Text>
+                )}
               </Space>
             ),
           },
@@ -215,7 +164,7 @@ export const SubscriptionsPage = () => {
             width: 120,
             render: (_: unknown, row: SubscriptionRow) => {
               const license = licenses.get(row.item.product);
-              const usable = license && isActiveLike(row.subscription);
+              const usable = license && isEntitled(row.subscription);
               return (
                 <Typography.Text type={usable ? undefined : 'secondary'}>
                   {usable
@@ -228,32 +177,24 @@ export const SubscriptionsPage = () => {
           {
             title: '操作',
             valueType: 'option',
-            width: 200,
+            width: 140,
             render: (_: unknown, row: SubscriptionRow) => {
               const license = licenses.get(row.item.product);
-              const manageable = license && isActiveLike(row.subscription);
+              if (!license || !isEntitled(row.subscription)) {
+                return (
+                  <Typography.Text type="secondary">
+                    {row.subscription.status === 'FROZEN' ? '请联系管理员' : '—'}
+                  </Typography.Text>
+                );
+              }
               return (
-                <Space size={4} wrap>
-                  {manageable && (
-                    <Button
-                      type="link"
-                      size="small"
-                      onClick={() => setDeviceRow(row)}
-                    >
-                      管理设备
-                    </Button>
-                  )}
-                  {isActiveLike(row.subscription) && (
-                    <Button
-                      type="link"
-                      danger
-                      size="small"
-                      onClick={() => openCancel(row)}
-                    >
-                      {row.subscription.cancelAtPeriodEnd ? '立即取消' : '取消订阅'}
-                    </Button>
-                  )}
-                </Space>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => setDeviceRow(row)}
+                >
+                  管理设备
+                </Button>
               );
             },
           },
@@ -338,45 +279,6 @@ export const SubscriptionsPage = () => {
           </Space>
         )}
       </Drawer>
-
-      <Modal
-        open={cancelRow !== null}
-        title={cancelImmediate ? '立即取消订阅' : '取消订阅'}
-        okText="确认取消"
-        cancelText="返回"
-        okButtonProps={{ danger: true, loading: cancelling }}
-        onOk={() => void handleCancel()}
-        onCancel={() => setCancelRow(null)}
-      >
-        {cancelRow && (
-          <Space direction="vertical" size={12} style={{ width: '100%' }}>
-            <Typography.Text>
-              订阅：{displayProductName(index, cancelRow.item.product)} ·{' '}
-              {cancelRow.item.plan}
-            </Typography.Text>
-            {cancelRow.subscription.items.length > 1 && (
-              <Typography.Text type="warning">
-                该订阅包含 {cancelRow.subscription.items.length} 个产品，取消将同时影响全部产品。
-              </Typography.Text>
-            )}
-            <Checkbox
-              checked={cancelImmediate}
-              onChange={(event) => setCancelImmediate(event.target.checked)}
-            >
-              立即取消（立即失去访问权限，许可证会被收回）
-            </Checkbox>
-            <Alert
-              type={cancelImmediate ? 'warning' : 'info'}
-              showIcon
-              message={
-                cancelImmediate
-                  ? '确认后订阅立即结束，已激活的设备将无法继续使用。'
-                  : `不勾选时，订阅将在 ${toDate(cancelRow.subscription.periodEnd)} 到期后失效，当前周期内仍可继续使用。`
-              }
-            />
-          </Space>
-        )}
-      </Modal>
     </PageContainer>
   );
 };
